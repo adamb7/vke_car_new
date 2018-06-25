@@ -259,6 +259,15 @@ def destroy():
     bw.stop()
     fw.turn(90)
 
+
+
+def shutdown_system(): # called by timer
+        print("Shutting down system...")
+        os.system('systemctl poweroff') # this will eventually issue a sigint to us, and we'll shutdown properly as well
+
+shutdown_timer = None
+
+
 '''
 MQTT Cuccok
 '''
@@ -266,11 +275,14 @@ def on_connect(client, userdata, flag, rc):
     print("Connected!", str(rc))
 
     client.subscribe(carManagement)
+    client.subscribe("stop_system")
+    client.subscribe("start_system")
 
 fill_paused = False # ez egy nagyon nagyon nagyon rosz megoldas.... de szorit az ido
 def on_message(client, userdata, msg):
     global stop_active,reset_active,pause_event
     global fill_paused # ez is ronda... rosz... csunya...
+    global shutdown_timer # ez rosszabb
 
     print("Topic: ", msg.topic + " Message: " + str(msg.payload))
 
@@ -346,6 +358,23 @@ def on_message(client, userdata, msg):
             pause_event.set()
             if not fill_paused: # ez azert van, hogyha volt egy pause/unpause a tank liquid error alatt, akkor ne induljon el a feltoltes
                 blc.resume()
+
+    # azert nem a terminate-t hasznalom, mert nem akarok abba meg plusz dologokat beleirogatni, eleg ha az csak az auto lelkivilagalval foglalkozik
+    # tovabba ott az uzenetek se teljesen utalnak arra, hogy minek kellene tortennie
+    # illetve ennek akkor is mukodnie kell, ha a gateway nem elerheto valamilyen okbol (becrashelt, kilepett, stb.)
+    # ha lehal a gateway akkor nincs broker es akkor nincs shutdown
+
+    elif msg.topic == "start_system": # cancel shutdown timer
+
+        if shutdown_timer:
+            shutdown_timer.cancel()
+            print("Shutdown canceled")
+
+    elif msg.topic == "stop_system": # start shutdown timer
+
+        shutdown_timer = threading.Timer(15,shutdown_system)
+        shutdown_timer.start()
+        print("System shutdown in 15s! Use start_system to cancel.")
 
 
 
