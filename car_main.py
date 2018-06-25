@@ -45,10 +45,10 @@ picar.setup()
 REFERENCES = [330,330,330,330,330]
 refFile = "/home/pi/SunFounder_PiCar-S/example/referenceConfig"
 
-fw = front_wheels.Front_Wheels(db='config')
+fw = front_wheels.Front_Wheels(db='../wheel_config')
 #fw.debug = True
 
-bw = back_wheels.Back_Wheels(db='config')
+bw = back_wheels.Back_Wheels(db='../wheel_config')
 forwardSpeed = carconfig.getForwardSpeed()
 
 lf = Line_Follower.Line_Follower()
@@ -331,6 +331,7 @@ def on_message(client, userdata, msg):
             blc.setOff() # auto unpause
 
         elif msg.payload == "initLED": # start_system
+            stop_active = True # pause -> gateway kapcsolat megszakad -> terminate -> start_system-re az auto elindulna, ugyhogy allitsuk meg
             fill_paused = False # tank animacio unpause lock ki
             reset_active = False # vonal skippeles ki
             pause_event.set() # unblock paused stuff.... ilyent start_system-re kapunk
