@@ -420,6 +420,9 @@ if __name__ == '__main__':
         logging.debug(traceback.print_exc())
     
     finally:
+        if shutdown_timer:
+            shutdown_timer.cancel()
+
         client.disconnect()
         stop_active = True
         destroy()
