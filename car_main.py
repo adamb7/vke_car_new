@@ -44,7 +44,7 @@ picar.setup()
 
 #REFERENCES = [270,290,300,290,270]
 REFERENCES = [330,330,330,330,330]
-refFile = "/home/pi/SunFounder_PiCar-S/example/referenceConfig"
+refFile = "../referenceConfig"
 
 fw = front_wheels.Front_Wheels(db='../wheel_config')
 #fw.debug = True
@@ -70,6 +70,7 @@ logging.info("log started")
 '''
 IRSensing
 '''
+ir.maxValue = carconfig.getIRSensitivity() # change threshold value
 obstacleErrorTime = 10
 obstacle = False
 #obstacleSeen = time.time()

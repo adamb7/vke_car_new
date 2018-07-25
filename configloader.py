@@ -12,7 +12,7 @@ class ConfigLoader():
 			raise Exception("Bad config")
 
 	def _checkConfig(self):
-		keys_to_check = ['ledconfig','led_inverted','rgb_led','forward_speed']
+		keys_to_check = ['ledconfig','led_inverted','rgb_led','forward_speed','ir_sensitivity']
 
 		for k in keys_to_check:
 			if not k in self._conf:
@@ -35,3 +35,6 @@ class ConfigLoader():
 
 	def getForwardSpeed(self):
 		return self._conf['forward_speed']
+
+	def getIRSensitivity(self):
+		return self._conf['ir_sensitivity']

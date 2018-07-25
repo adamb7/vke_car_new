@@ -81,7 +81,7 @@ callback = None
 def Sampling(timeout=1):
     try:
         setup(0x48)
-        Calibrate()
+        #Calibrate() -- konfig fajlba atrakva
         
         i = 0
         while True:
@@ -109,8 +109,8 @@ def CheckValues(quantity=10):
         for i in xrange(quantity):
             value = read(0)
             
-            #print(maxValue)
-            #print(value)
+#            print(maxValue)
+#            print(value)
             
             if value > maxValue:
                 count += 1
