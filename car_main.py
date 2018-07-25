@@ -77,10 +77,12 @@ obstacle = False
 def IRCallback():  
     global obstacleSeen, obstacle
     global client
+    global blc
     
     print("!!!!!!!!!!!!!!!!!!!!!!!!valamit latott!!!!!!!!!!!!!!!!!!!!!!!")
     if not obstacle:
         print("elindul az obstacle hiba")
+        blc.pause()
         obstacle = True
         client.publish("forklift_obstacle_error")
         time.sleep(obstacleErrorTime)
@@ -90,6 +92,7 @@ def IRCallback():
         while ir.IsObstaclePresent():
             time.sleep(0.125)
         
+        blc.resume()
         obstacle = False
         client.publish("forklift_obstacle_error_reset")
             
