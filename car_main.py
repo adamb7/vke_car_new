@@ -19,7 +19,7 @@ import configloader
 
 # first
 
-carconfig = configloader.CarConfigLoader() # any exception this function throws should kill the program
+carconfig = configloader.ConfigLoader("/etc/carconfig.json") # any exception this function throws should kill the program
 
 #init / setup metodusba
 GPIO.setmode(GPIO.BCM)
@@ -45,27 +45,12 @@ picar.setup()
 REFERENCES = [330,330,330,330,330]
 refFile = "/home/pi/SunFounder_PiCar-S/example/referenceConfig"
 
-#63
-#50 vaz nelkul 
-forward_speed = 53
-
-#55
-backward_speed = 30
-
-#40
-#turning_angle = 40 # ezt en kommenteztem ki -- Marci
-
-#40
-max_off_track_count = 40
-
-#0.0005
-#0.005
-delay = 0.005
-
 fw = front_wheels.Front_Wheels(db='config')
 #fw.debug = True
 
 bw = back_wheels.Back_Wheels(db='config')
+forwardSpeed = carconfig.getForwardSpeed()
+
 lf = Line_Follower.Line_Follower()
 
 
@@ -169,11 +154,8 @@ def setup():
         traceback.print_exc()
 
 def main():
-    #global turning_angle # ezt en kommenteztem ki -- Marci
     global stop_active,reset_active
     global stopped,pause_event
-
-    off_track_count = 0
 
     a_step = 5  #3
     b_step = 15  #10
@@ -182,7 +164,6 @@ def main():
 
     last_time = time.time() # kezdeti erteket adunk neki, ezt arra hasznaljuk, hogy ket vonal triggerelt megallas kozott minimum 5mp teljen el
 
-    debug = 0
     while True:
         try:
             
@@ -195,11 +176,10 @@ def main():
                 
 
                 lt_status_now = lf.read_digital()
-                #print("%s : %s" % (debug, lt_status_now))
-                #print("%s : %s" % (debug, lf.read_analog()))
-                debug += 1
-                
-                bw.speed = forward_speed
+                #print(lt_status_now)
+                #print(lf.read_analog())
+
+                bw.speed = forwardSpeed
                 bw.forward()
                 
                 step = 0 # ezt en raktam ide -- Marci
@@ -248,48 +228,25 @@ def main():
                                      # ha ez itt van, akkor ujra kiertekeli a felteteleket, es nem 'nyekken' a szervo egyet
                                      # mivel ez legfelulre ugrik vissza, ezert a delay nem fut le, es egybol tud korrigalni az auto
 
-                # Direction calculate
+                # keep straight
                 if lt_status_now == [0, 0, 1, 0, 0]:
-                    #print("straight (0)")  # ezt en raktam ide -- Marci
-                    off_track_count = 0
                     turning_angle = 90
-                    #fw.turn(90)
                     
                 # turn right
                 elif lt_status_now in ([0, 1, 1, 0, 0], [0, 1, 0, 0, 0], [1, 1, 0, 0, 0], [1, 0, 0, 0, 0]):
-                    #print("right (-)")  # ezt en raktam ide -- Marci
-                    off_track_count = 0
-                    if step == 0: # ezt en raktam ide -- Marci
-                        pass
-                        #print("It's got a direction, but no step")
                     turning_angle = int(90 - step)
                     
                 # turn left
                 elif lt_status_now in ([0, 0, 1, 1, 0], [0, 0, 0, 1, 0], [0, 0, 0, 1, 1], [0, 0, 0, 0, 1]):
-                    off_track_count = 0
-                    #print("left (+)")  # ezt en raktam ide -- Marci
-                    if step == 0: # ezt en raktam ide -- Marci
-                        pass
-                        #print("It's got a direction, but no step")
                     turning_angle = int(90 + step)
                     
-                elif lt_status_now == [0, 0, 0, 0, 0]:                
-                    off_track_count += 1
-                    if off_track_count > max_off_track_count:
-                        pass
-                        #CorrectionLogic(last_status)
-                        
-                else:
-                    off_track_count = 0
-                
-                if not turning_angle: # ezt en raktam ide -- Marci
-                    #print("rip")
+
+                if not turning_angle: # ha nem latja a vonalat, menjen egyenesen... ugyan mi baj lehet?
                     turning_angle = 90
 
-                #print(turning_angle)       
                 fw.turn(turning_angle)
             
-            time.sleep(delay)
+            time.sleep(0.005)
         
         except KeyboardInterrupt:
             return
