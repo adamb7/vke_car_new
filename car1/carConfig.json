@@ -1,0 +1,7 @@
+{
+        "ledconfig" : {"battery" : {"r" : 19, "g" : 13} },
+        "led_inverted" : true,
+        "rgb_led": false,
+        "forward_speed": 53,
+        "ir_sensitivity" : 130
+}
