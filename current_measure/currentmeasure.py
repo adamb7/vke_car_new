@@ -5,6 +5,7 @@ from IRSensor import IRSensor as ir
 address = 0x48
 data = 0
 bus = ir.bus
+current_sampling_rate = 5
 
 
 def read(chn=0): #channel
@@ -30,14 +31,20 @@ def StartCurrentSampling():
     k.setDaemon(True)
     k.start()
 
+def calculate_current(current_data):
+	data_out = ((3300 *current_data) /256) #miliamps
+	return data_out
+
 def read_current():
     return data
 
 def read_loop():
-    global data
-    while True:
-        data = read(3)
-        time.sleep(5)
+	global data
+	global current_sampling_rate
+	while True:
+		temp = read(3)
+		data = calculate_current(temp)
+		time.sleep(current_sampling_rate)
 
 '''
 if __name__ == "__main__":

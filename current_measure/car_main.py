@@ -32,7 +32,7 @@ lc.start()
 blc = BottleLedControl(12,BottleLedControl.ANIMATION_OFF)
 blc.start()
 
-
+flag_connect = 0 #uj
 carManagement = "carManagement"
 
 stop_active = True
@@ -166,6 +166,7 @@ def setup():
 def main():
     global stop_active,reset_active
     global stopped,pause_event
+    global client #uj
 
     a_step = 5  #3
     b_step = 15  #10
@@ -173,13 +174,17 @@ def main():
     d_step = 45  #45
 
     last_time = time.time() # kezdeti erteket adunk neki, ezt arra hasznaljuk, hogy ket vonal triggerelt megallas kozott minimum 5mp teljen el
+    current_trigger = time.time() #uj
 
     while True:
         try:
             
             turning_angle = None # ezt en raktam ide -- Marci
-            #current_data = read_current()#uj
-            #client.publish("current",current_data)#uj
+            #uj
+            if (time.time() - current_trigger) > current_sampling_rate:
+                current_data = read_current()#
+                client.publish("current",current_data)
+                current_trigger = time.time()
 
             
             if (stop_active or obstacle or (not pause_event.isSet())): # pause event = False - paused; True - unpaused
@@ -285,11 +290,13 @@ shutdown_timer = None
 MQTT Cuccok
 '''
 def on_connect(client, userdata, flag, rc):
+    global flag_connect #uj
     print("Connected!", str(rc))
 
     client.subscribe(carManagement)
     client.subscribe("stop_system")
     client.subscribe("start_system")
+    flag_connect = 1 #uj
 
 fill_paused = False # ez egy nagyon nagyon nagyon rosz megoldas.... de szorit az ido
 def on_message(client, userdata, msg):
@@ -397,6 +404,8 @@ def on_publish(client, userdata, mid):
 
 def on_disconnect(client, userdata, result):
     global stop_active
+    global flag_connect #uj
+    flag_connect= 0 #uj
     if result != 0:
         #logolas!
         print("A kocsi es broker kozti kommunikacio megszakadt.")
@@ -410,16 +419,21 @@ def on_disconnect(client, userdata, result):
             stop_active = False
 
 #uj
-def current_publish():
+def current_publish(client):
+    #global client
+    global flag_connect
     while True:
-        a = read_current()
-        client.publish("current", a)
+        if flag_connect == 1:
+            a = read_current()
+            client.publish("current", a)
         time.sleep(10)
 #uj
 def StartCurrentPublish():
-    k=threading.Thread(target=current_publish(),name="current_publisher")
+    global client
+    k=threading.Thread(target=current_publish(client),name="current_publ")
     k.isDaemon(True)
     k.start()
+
 
 if __name__ == '__main__':
     #global client, stop_active
@@ -429,7 +443,7 @@ if __name__ == '__main__':
 	
 	if init_mqtt():
             client.loop_start()
-            StartCurrentPublish()  # uj
+            #StartCurrentPublish()  # uj
             main()
         else:
             print "A kapcsolodas nem sikerult az mqtt brokerhez"
