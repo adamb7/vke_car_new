@@ -12,8 +12,13 @@ Calibration register values were calculated with following method:
 	CAL 		= 336.8421 (337) ===> 0x151
 
 Reconversion of received data: Y -> X
+The value of 0 can be used for b for both current and power measurements with very little loss in accuracy
+because the offset for power and current measurements is very low.
+	b = 0
 The voltage LSB for bus voltage and shunt voltage are fixed at 1.25 mV/bit and 2.5 µV/bit.
-	X = Y * 1.25mV/bit
+	m = 8
+	R = 2
+	X = (1 / m) * (Y * 10^[-R]  - b)
 
 Calculating m,R for current measurement:
 	m = 1 / Current_LSB
@@ -114,7 +119,8 @@ def calculate_measurement(source):
 					m /= 10
 					R -= 1
 		else				#source = voltage
-			m = 1000 / 1.25		#1.25 mV/bit
+			m = 8			#1.25 mV/bit
+			R = 2
 			Y = read_voltage()
 		X = (1 / m) * ((Y * (10^(-R)))  - b)
 		return X
