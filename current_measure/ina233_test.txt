@@ -38,6 +38,9 @@ import ina233
 
 MAX_CURRENT 	= 5 	#5 AMPER
 R_SHUNT 	= 0.1 	#100 mOHM 
+CURRENT_LSB 	= MAX_CURRENT / 32768
+CAL 		= 0.00512 / (Current_LSB * RShunt)
+CAL_HEX 	= hex(int(round(CAL)))
 
 address = 0x45 #A0,A1: VS
 bus = ir.bus
@@ -51,21 +54,15 @@ data_readings = {
 
 
 def init_ina233():
+	global CAL_HEX
 	try:
-		val = 0x151 #calculated CAL value
+		val = CAL_HEX #calculated CAL value
 		bus.write_i2c_block_data(address,CLEAR_FAULTS,NULL)
 		bus.write_i2c_block_data(address,MFR_CALIBRATION,val)
 		
 	except Exception e:
 		print "Lipo monitor init failed"
 		print "Address: %s" % address
-		print e
-
-def calculate_measurement(source):
-	try:
-		if source = current:
-	Exception e:
-		print "Conversion error"
 		print e
 
 def read_current():
@@ -98,14 +95,41 @@ def_read_power():
 		print e
 	return power_data
 
+def calculate_measurement(source):
+	global CURRENT_LSB
+	R 		= 0
+	b 		= 0
+	try:
+		if source != voltage:
+			if source = current: 	#source = current
+				m = 1 / CURRENT_LSB
+				Y = read_current()
+			else:			#source = power
+				m = 1 / (25*CURRENT_LSB)
+				Y = read_power()
+			while m < 32768:
+					m *= 10 
+					R += 1
+			while m > 32768:
+					m /= 10
+					R -= 1
+		else				#source = voltage
+			m = 1000 / 1.25		#1.25 mV/bit
+			Y = read_voltage()
+		X = (1 / m) * ((Y * (10^(-R)))  - b)
+		return X
+	Exception e:
+		print "Conversion error"
+		print e
+
 def read_loop():
 	global data_readings
 	global sampling_rate
 	init_ina233()
 	while True:
-		data_readings["current"] = read_current()
-		data_readings["voltage"] = read_voltage()
-		data_readings["power"] 	 = read_power()
+		data_readings["current"] = calculate_measurement(current)
+		data_readings["voltage"] = calculate_measurement(voltage)
+		data_readings["power"] 	 = calculate_measurement(power)
 		time.sleep(sampling_rate)
 
 #def StartCurrentSampling(): #main: change!
@@ -114,6 +138,8 @@ StartLipoMonitorSampling():
     k.setDaemon(True)
     k.start()
 
+def get_readings():
+	return data_readings
 
 """FOR TESTING"""
 if __name__ == '__main__':
