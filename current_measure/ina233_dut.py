@@ -29,7 +29,7 @@ Calculating m,R for power measurement:
 	X = (1 / m) * (Y * 10^[-R]  - b)
 """
 
-
+from __future__ import division
 import sys
 import time
 import threading
@@ -37,14 +37,15 @@ import threading
 from IRSensor import IRSensor as ir
 from ina233 import *
 
+
 __import__("ina233")
 
 MAX_CURRENT = 5  # 5 AMPER
 R_SHUNT = 0.1  # 100 mOHM
 CURRENT_LSB = MAX_CURRENT / 32768
-#CAL = 0.00512 / (CURRENT_LSB * R_SHUNT)
+#CAL = int(round(0.00512 / (CURRENT_LSB * R_SHUNT)))
 CAL = 337
-CAL_HEX = hex(int(round(CAL)))
+#CAL_HEX = hex(int(round(CAL)))
 
 address = 0x45  # A0,A1: VS
 bus = ir.bus
@@ -60,14 +61,15 @@ data_readings = {
 def init_ina233():
     global address, CAL_HEX
     try:
-        val = CAL_HEX  # calculated CAL value
-        #bus.write_i2c_block_data(address ,CLEAR_FAULTS, 1)
-        bus.write_i2c_block_data(address, 0, [MFR_CALIBRATION,  0x151])
-        #voltage_data = bus.read_i2c_block_data(address, READ_VIN, 2)
-        #print(hex(int(voltage_data[0])))
-        #print(hex(int(voltage_data[1])))
-        #bus.write_byte_data(address, 0, MFR_CALIBRATION)
-        #bus.write_byte_data(address, 0, 0x151)
+        #val = CAL_HEX  # calculated CAL value
+
+        bus.write_byte(address, CLEAR_FAULTS)
+        bus.write_word_data(address,MFR_CALIBRATION, CAL)
+        #a = bus.read_word_data(address, MFR_CALIBRATION)
+        #print(a)
+        #voltage_data = bus.read_i2c_block_data(address, MFR_CALIBRATION, 2)
+        #print(hex(int(voltage_data[0]))) #lsb
+        #print(hex(int(voltage_data[1]))) #msb
 
     except Exception, e:
         print "Lipo monitor init failed"
@@ -77,7 +79,7 @@ def init_ina233():
 def read_current():
     global address ,bus
     try:
-        current_data = bus.read_i2c_block_data(address ,READ_IN ,2)
+        current_data = bus.read_word_data(address, READ_IN)
     except Exception, e:
         print "Current read error"
         print "Address: %s" % address
@@ -87,7 +89,7 @@ def read_current():
 def read_voltage():
     global address ,bus
     try:
-        voltage_data = bus.read_i2c_block_data(address ,READ_VIN ,2)
+        voltage_data = bus.read_word_data(address, READ_VIN)
     except Exception, e:
         print "Voltage read error"
         print "Address: %s" % address
@@ -97,7 +99,7 @@ def read_voltage():
 def read_power():
     global address ,bus
     try:
-        power_data = bus.read_i2c_block_data(address ,READ_PIN ,2)
+        power_data = bus.read_word_data(address, READ_PIN)
     except Exception, e:
         print "Power read error"
         print "Address: %s" % address
@@ -126,7 +128,7 @@ def calculate_measurement(source):
             m = 8  # 1.25 mV/bit
             R = 2
             Y = read_voltage()
-        X = (1 / m) * ((Y * (10 ^(-R)))  - b)
+        X = (1 / m) * ((Y * (pow(10,-R)))  - b)
         return X
     except Exception, e:
         print "Conversion error"
@@ -156,9 +158,16 @@ def get_readings():
 if __name__ == '__main__':
     try:
         init_ina233()
-        #print(read_current)
-        #print(read_voltage)
-        #print(read_power)
+        #print("Current:")
+        #print(read_current())
+        print("Voltage in V:")
+        print(calculate_measurement("voltage"))
+        print("Current in A:")
+        print(calculate_measurement("current"))
+        print("Power in W:")
+        print(calculate_measurement("power"))
+        #print("Power:")
+        #print(read_power())
 
     except Exception, e:
         print "Test failed"
