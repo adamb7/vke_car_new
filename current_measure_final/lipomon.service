@@ -1,0 +1,15 @@
+[Unit]
+Description=Lipomon Service
+After=network.target network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python2 /home/netvisor/car_new/LipoMonTest.py
+WorkingDirectory=/home/netvisor/car_new/
+KillMode=process
+KillSignal=SIGINT
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target
