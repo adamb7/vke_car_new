@@ -80,6 +80,7 @@ def main():
             client.publish("current", data["current"])
             client.publish("voltage", data["voltage"])
             client.publish("power", data["power"])
+            client.publish("shunt", data["shunt"])
         else:
             print("lipo no connect")
         time.sleep(5)
