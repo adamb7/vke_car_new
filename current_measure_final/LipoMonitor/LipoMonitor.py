@@ -3,12 +3,13 @@
 from __future__ import division
 import time
 import threading
+import os
 from IRSensor import IRSensor as ir
 
 MAX_CURRENT     = 5  # 5 AMPER
 R_SHUNT         = 0.1  # 100 mOHM
-CURRENT_LSB     = MAX_CURRENT / 32768
-CAL = 0.00512 / (CURRENT_LSB * R_SHUNT)
+CURRENT_LSB = MAX_CURRENT / 32768
+CAL = round(0.00512 / (CURRENT_LSB * R_SHUNT))
 CLEAR_FAULTS 		    = 0x03
 RESTORE_DEFAULT_ALL 	= 0x12
 CAPABILITY 		        = 0x19
@@ -42,8 +43,8 @@ TI_MFR_ID		        = 0xE0
 TI_MFR_MODEL		    = 0xE1
 TI_MFR_REVISION         = 0xE2
 
-
-address = 0x45  # A0,A1: VS
+init_flag = 0 # for shutdown
+address = 0x45  # A0,A1: VCC
 bus = ir.bus
 monitor_sampling_rate = 5
 data_readings = {
@@ -56,18 +57,19 @@ data_readings = {
 
 
 def init_ina233():
-    global address
+    global address, init_flag
     try:
         bus.write_byte(address, CLEAR_FAULTS)
         bus.write_word_data(address,MFR_CALIBRATION, CAL)
-
+        init_flag = 1
     except Exception, e:
         print "Lipo monitor init failed"
         print "Address: %s" % address
         print e
+        init_flag = 0
 
 def read_current():
-    global address ,bus
+    global address, bus
     try:
         current_data = bus.read_word_data(address, READ_IN)
     except Exception, e:
@@ -77,7 +79,7 @@ def read_current():
     return current_data
 
 def read_voltage():
-    global address ,bus
+    global address, bus
     try:
         voltage_data = bus.read_word_data(address, READ_VIN)
     except Exception, e:
@@ -87,7 +89,7 @@ def read_voltage():
     return voltage_data
 
 def read_power():
-    global address ,bus
+    global address, bus
     try:
         power_data = bus.read_word_data(address, READ_PIN)
     except Exception, e:
@@ -97,44 +99,44 @@ def read_power():
     return power_data
 
 def read_shunt():
-    global address ,bus
+    global address, bus
     try:
         shunt_data = bus.read_word_data(address, MFR_READ_VSHUNT)
     except Exception, e:
-        print "Voltage read error"
+        print "Shunt voltage read error"
         print "Address: %s" % address
         print e
     return shunt_data
 
 def calculate_measurement(source):
     global CURRENT_LSB
-    R 		= 0
-    b 		= 0
+    r = 0
+    b = 0
     try:
         if (source != "voltage") & (source != "shunt") :
             if source == "current":     # source = current
                 m = 1 / CURRENT_LSB
-                Y = read_current()
+                y = read_current()
             else:                       # source = power
-                m = 1 / (25 *CURRENT_LSB)
-                Y = read_power()
+                m = 1 / (25 * CURRENT_LSB)
+                y = read_power()
             while m < 32768:
                 m *= 10
-                R += 1
+                r += 1
             while m > 32768:
                 m /= 10
-                R -= 1
+                r -= 1
         else:                           # source = voltage
             if source == "voltage":
                 m = 8  # 1.25 mV/bit
-                R = 2
-                Y = read_voltage()
+                r = 2
+                y = read_voltage()
             else:
-                m = 4 # 2.5 uV/bit
-                R = 5
-                Y = read_shunt()
-        X = (1 / m) * ((Y * (pow(10,-R)))  - b)
-        return X
+                m = 4  # 2.5 uV/bit
+                r = 5
+                y = read_shunt()
+        x = (1 / m) * ((y * (pow(10, -r))) - b)
+        return x
     except Exception, e:
         print "Conversion error"
         print e
@@ -157,6 +159,12 @@ def StartLipoMonitorSampling():
 
 def get_readings():
     return data_readings
+
+def shutdown_car():
+    global init_flag
+    if init_flag:
+        print("Shutting down car...")
+        os.system('systemctl poweroff')
 
 # #"""FOR TESTING"""
 # if __name__ == '__main__':
