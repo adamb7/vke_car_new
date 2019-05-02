@@ -53,13 +53,11 @@ def on_publish(client, userdata, mid):
     print("lipo Message published: " + str(mid))
 
 def on_disconnect(client, userdata, result):
-    #global stop_active
     global flag_connect  #uj
     flag_connect = 0  #uj
     if result != 0:
         # logolas!
         print("LIPO: A kocsi es broker kozti kommunikacio megszakadt.")
-        #stop_active = True
 
         if (not MQTTReconnect()):
             print("LIPO: A kapcsolodas nem sikerult, az alkalmazas leall...")
@@ -67,7 +65,6 @@ def on_disconnect(client, userdata, result):
             return
         else:
             print("LIPO: A visszakapcsolodas sikerult.")
-            #stop_active = False
             return
 
 def main():
@@ -75,7 +72,9 @@ def main():
     lipo.StartLipoMonitorSampling()
     while True:
         data = lipo.get_readings()
-        print(lipo.get_readings())
+        if data["voltage"] < 6.5:
+            print("Battery is low! Attempting to shutdown system...")
+            lipo.shutdown_car()
         if flag_connect:
             client.publish("current", data["current"])
             client.publish("voltage", data["voltage"])
@@ -85,8 +84,8 @@ def main():
             print("lipo no connect")
         time.sleep(5)
 
+
 if __name__ == '__main__':
-    # global client, stop_active
     try:
         if init_mqtt():
             client.loop_start()
