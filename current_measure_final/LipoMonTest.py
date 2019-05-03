@@ -74,15 +74,17 @@ def main():
         data = lipo.get_readings()
         if data["voltage"] < 7.0:
             print("Battery is low! Attempting to shutdown system...")
-            lipo.shutdown_car()
+            client.publish("cal", "SHUTDOWN!!!")
+            #lipo.shutdown_car()
         if flag_connect:
             client.publish("current", data["current"])
             client.publish("voltage", data["voltage"])
             client.publish("power", data["power"])
             client.publish("shunt", data["shunt"])
+            client.publish("cal", lipo.CAL)
         else:
             print("lipo no connect")
-        time.sleep(5)
+        time.sleep(lipo.monitor_sampling_rate)
 
 
 if __name__ == '__main__':
