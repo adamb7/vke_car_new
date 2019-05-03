@@ -72,7 +72,7 @@ def main():
     lipo.StartLipoMonitorSampling()
     while True:
         data = lipo.get_readings()
-        if data["voltage"] < 6.5:
+        if data["voltage"] < 7.0:
             print("Battery is low! Attempting to shutdown system...")
             lipo.shutdown_car()
         if flag_connect:
