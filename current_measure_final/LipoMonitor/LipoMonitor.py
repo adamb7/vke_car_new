@@ -6,10 +6,10 @@ import threading
 import os
 from IRSensor import IRSensor as ir
 
-MAX_CURRENT     = 5  # 5 AMPER
+MAX_CURRENT     = 5.0  # 5 AMPER
 R_SHUNT         = 0.1  # 100 mOHM
-CURRENT_LSB = MAX_CURRENT / 32768
-CAL = round(0.00512 / (CURRENT_LSB * R_SHUNT))
+CURRENT_LSB = MAX_CURRENT / 32768.0
+CAL = round((5.12 / (CURRENT_LSB * R_SHUNT)) / 1000)  # CAL = 335
 CLEAR_FAULTS 		    = 0x03
 RESTORE_DEFAULT_ALL 	= 0x12
 CAPABILITY 		        = 0x19
@@ -43,13 +43,13 @@ TI_MFR_ID		        = 0xE0
 TI_MFR_MODEL		    = 0xE1
 TI_MFR_REVISION         = 0xE2
 
-init_flag = 0 # for shutdown
+init_flag = 0  # for shutdown
 address = 0x45  # A0,A1: VCC
 bus = ir.bus
 monitor_sampling_rate = 5
 data_readings = {
     "current": 0,
-    "voltage": 0,
+    "voltage": 8,
     "power"	:	0,
     "shunt":   0
 }
@@ -111,31 +111,31 @@ def read_shunt():
 def calculate_measurement(source):
     global CURRENT_LSB
     r = 0
-    b = 0
+    b = 0.0
     try:
         if (source != "voltage") & (source != "shunt") :
             if source == "current":     # source = current
-                m = 1 / CURRENT_LSB
+                m = 1.0 / CURRENT_LSB
                 y = read_current()
             else:                       # source = power
-                m = 1 / (25 * CURRENT_LSB)
+                m = 1.0 / (25.0 * CURRENT_LSB)
                 y = read_power()
-            while m < 32768:
-                m *= 10
+            while m < 32768.0:
+                m *= 10.0
                 r += 1
-            while m > 32768:
-                m /= 10
+            while m > 32768.0:
+                m /= 10.0
                 r -= 1
         else:                           # source = voltage
             if source == "voltage":
                 m = 8  # 1.25 mV/bit
                 r = 2
                 y = read_voltage()
-            else:
+            else:                       # source = shunt
                 m = 4  # 2.5 uV/bit
                 r = 5
                 y = read_shunt()
-        x = (1 / m) * ((y * (pow(10, -r))) - b)
+        x = (1.0 / m) * ((y * (pow(10, -r))) - b)
         return x
     except Exception, e:
         print "Conversion error"
@@ -145,12 +145,25 @@ def lipo_read_loop():
     global data_readings
     global monitor_sampling_rate
     init_ina233()
+    avg_voltage = 0
+    read_trigger = 0
+    #first read
+    data_readings["current"] = calculate_measurement("current")
+    data_readings["voltage"] = calculate_measurement("voltage")
+    data_readings["power"] = calculate_measurement("power")
+    data_readings["shunt"] = calculate_measurement("shunt")
     while True:
-        data_readings["current"] = calculate_measurement("current")
-        data_readings["voltage"] = calculate_measurement("voltage")
-        data_readings["power"] 	 = calculate_measurement("power")
-        data_readings["shunt"]   = calculate_measurement("shunt")
-        time.sleep(monitor_sampling_rate)
+        if read_trigger == monitor_sampling_rate:
+            avg_voltage /= monitor_sampling_rate
+            data_readings["current"] = calculate_measurement("current")
+            data_readings["voltage"] = avg_voltage
+            data_readings["power"] 	 = calculate_measurement("power")
+            data_readings["shunt"]   = calculate_measurement("shunt")
+            avg_voltage = 0
+            read_trigger = 0
+        avg_voltage  += calculate_measurement("voltage")
+        read_trigger += 1
+        time.sleep(1)
 
 def StartLipoMonitorSampling():
     k = threading.Thread(target=lipo_read_loop)
@@ -165,6 +178,19 @@ def shutdown_car():
     if init_flag:
         print("Shutting down car...")
         os.system('systemctl poweroff')
+
+# def value_avg():
+#     global avg_voltage
+#     try:
+#         avg = 0
+#         for i in xrange(5):
+#             value = calculate_measurement("voltage")
+#             avg += value
+#             time.sleep(1)
+#         avg_voltage = avg / 5
+#     except Exception, e:
+#         print("Voltage sampling failed")
+#         print(e)
 
 # #"""FOR TESTING"""
 # if __name__ == '__main__':
