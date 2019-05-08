@@ -9,7 +9,8 @@ from IRSensor import IRSensor as ir
 MAX_CURRENT     = 5.0  # 5 AMPER
 R_SHUNT         = 0.1  # 100 mOHM
 CURRENT_LSB = MAX_CURRENT / 32768.0
-CAL = round((5.12 / (CURRENT_LSB * R_SHUNT)) / 1000)  # CAL = 335
+CAL = int(round((5.12 / (CURRENT_LSB * R_SHUNT)) / 1000))  # CAL = 335
+#CAL = 336
 CLEAR_FAULTS 		    = 0x03
 RESTORE_DEFAULT_ALL 	= 0x12
 CAPABILITY 		        = 0x19
@@ -60,8 +61,11 @@ def init_ina233():
     global address, init_flag
     try:
         bus.write_byte(address, CLEAR_FAULTS)
-        bus.write_word_data(address,MFR_CALIBRATION, CAL)
-        init_flag = 1
+	bus.write_word_data(address,MFR_CALIBRATION,CAL)
+	if bus.read_word_data(address,MFR_CALIBRATION) != CAL:
+		init_flag = 0
+	else:	
+		init_flag = 1
     except Exception, e:
         print "Lipo monitor init failed"
         print "Address: %s" % address
@@ -144,7 +148,10 @@ def calculate_measurement(source):
 def lipo_read_loop():
     global data_readings
     global monitor_sampling_rate
+    global init_flag 
     init_ina233()
+    while init_flag == 0:
+	init_ina233()
     avg_voltage = 0
     read_trigger = 0
     #first read
