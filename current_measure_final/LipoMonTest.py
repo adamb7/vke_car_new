@@ -77,7 +77,7 @@ def main():
             client.publish("cal", "SHUTDOWN!!!")
             #lipo.shutdown_car()
         if flag_connect:
-            client.publish("current", data["current"])
+	    client.publish("current", data["current"])
             client.publish("voltage", data["voltage"])
             client.publish("power", data["power"])
             client.publish("shunt", data["shunt"])
