@@ -32,6 +32,11 @@ blc.start()
 
 
 carManagement = "carManagement"
+carStatus = "carStatus"  # uj
+moving = "car_moving"  # uj
+stopped = "car_stopped"  # uj
+carFlag = 0  # uj , 0: stopped; 1: moving
+publish_no_trigger = 0  # uj , forklift_power_error publish skip
 
 stop_active = True
 reset_active = False # csak arra van hasznalva, hogy skippelje a vonalakat
@@ -84,7 +89,7 @@ def IRCallback():
         print("elindul az obstacle hiba")
         blc.pause()
         obstacle = True
-        client.publish("forklift_obstacle_error")
+        client.publish("forklift_obstacle_error", 0)
         time.sleep(obstacleErrorTime)
 
         pause_event.wait() # ha pause volt, akkor megvarjuk amig az feloldodik
@@ -94,7 +99,7 @@ def IRCallback():
         
         blc.resume()
         obstacle = False
-        client.publish("forklift_obstacle_error_reset")
+        client.publish("forklift_obstacle_error_reset", 0)
             
 
 ir.callback = IRCallback
@@ -161,6 +166,7 @@ def setup():
 def main():
     global stop_active,reset_active
     global stopped,pause_event
+    global carFlag, publish_no_trigger
 
     a_step = 5  #3
     b_step = 15  #10
@@ -176,6 +182,12 @@ def main():
             
             if (stop_active or obstacle or (not pause_event.isSet())): # pause event = False - paused; True - unpaused
                 bw.stop()
+                if carFlag == 1:  # uj
+                    if publish_no_trigger == 0:
+                        client.publish(carStatus, stopped)  # uj
+                    else:
+                        publish_no_trigger = 0
+                    carFlag = 0  # uj
 
             elif (not (stop_active or obstacle)) and pause_event.isSet():
                 
@@ -186,6 +198,9 @@ def main():
 
                 bw.speed = forwardSpeed
                 bw.forward()
+                if carFlag == 0:  # uj
+                    client.publish(carStatus, moving)  # uj
+                    carFlag = 1  # uj
                 
                 step = 0 # ezt en raktam ide -- Marci
 
@@ -213,7 +228,10 @@ def main():
 
                         if not reset_active:
                             bw.stop()
-                            print("Vonal triggerelt magallas")
+                            if carFlag == 1:
+                                client.publish(carStatus, stopped)  # uj
+                                carFlag = 0
+                            print("Vonal triggerelt megallas")
                         else:
                             print("Latott vonalat, de nem allt meg")
 
@@ -261,7 +279,11 @@ def main():
 
 
 def destroy():
+    global  carFlag
     bw.stop()
+    if carFlag == 1:
+        client.publish(carStatus, stopped)  # uj
+        carFlag = 0
     fw.turn(90)
 
 
@@ -288,6 +310,7 @@ def on_message(client, userdata, msg):
     global stop_active,reset_active,pause_event
     global fill_paused # ez is ronda... rosz... csunya...
     global shutdown_timer # ez rosszabb
+    global publish_no_trigger  # uj
 
     print("Topic: ", msg.topic + " Message: " + str(msg.payload))
 
@@ -303,12 +326,13 @@ def on_message(client, userdata, msg):
             stop_active = True
 
         elif msg.payload == "stopAndBlink":
+            publish_no_trigger = 1  # uj
             stop_active = True
             lc.setAnimation("battery",ledcontrol.LEDAnimationError())
             time.sleep(10)
             pause_event.wait() # wait for pause to set
             lc.setAnimation("battery",ledcontrol.LEDAnimationGood())
-            client.publish("forklift_power_error_reset")
+            client.publish("forklift_power_error_reset", 0)
 
         elif msg.payload == "startFill":
             fill_paused = False # ezt is csak azert, ha a resume full nem jott volna meg, akkor ez a resz ne bugoljon be
