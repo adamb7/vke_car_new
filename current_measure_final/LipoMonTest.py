@@ -77,11 +77,10 @@ def main():
             client.publish("cal", "SHUTDOWN!!!")
             #lipo.shutdown_car()
         if flag_connect:
-	    client.publish("current", data["current"])
+            client.publish("current", data["current"])
             client.publish("voltage", data["voltage"])
             client.publish("power", data["power"])
-            client.publish("shunt", data["shunt"])
-            client.publish("cal", lipo.CAL)
+            client.publish("car_power", data["car_power"])
         else:
             print("lipo no connect")
         time.sleep(lipo.monitor_sampling_rate)
