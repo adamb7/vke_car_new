@@ -52,7 +52,8 @@ data_readings = {
     "current": 0,
     "voltage": 8,
     "power"	:	0,
-    "shunt":   0
+    "shunt":   0,
+    "car_power": 0
 }
 
 
@@ -158,14 +159,16 @@ def lipo_read_loop():
     data_readings["current"] = calculate_measurement("current")
     data_readings["voltage"] = calculate_measurement("voltage")
     data_readings["power"] = calculate_measurement("power")
-    data_readings["shunt"] = calculate_measurement("shunt")
+    #data_readings["shunt"] = calculate_measurement("shunt")
+    data_readings["car_power"] = data_readings["current"] * data_readings["voltage"]
     while True:
         if read_trigger == monitor_sampling_rate:
             avg_voltage /= monitor_sampling_rate
             data_readings["current"] = calculate_measurement("current")
             data_readings["voltage"] = avg_voltage
             data_readings["power"] 	 = calculate_measurement("power")
-            data_readings["shunt"]   = calculate_measurement("shunt")
+            #data_readings["shunt"]   = calculate_measurement("shunt")
+            data_readings["car_power"] = data_readings["current"] * data_readings["voltage"]
             avg_voltage = 0
             read_trigger = 0
         avg_voltage  += calculate_measurement("voltage")
